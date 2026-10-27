@@ -1,0 +1,44 @@
+[project]
+name = "clipper-api"
+version = "0.1.0"
+description = "Clipper API + worker: turns long YouTube videos into viral 9:16 Shorts."
+requires-python = ">=3.12,<3.14"
+dependencies = [
+  "fastapi[standard]>=0.143",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "redis>=5.2",
+  "arq>=0.28",
+  "sse-starlette>=3.5",
+  "yt-dlp[default]>=2026.8.19",  # [default] pulls yt-dlp-ejs for YouTube JS challenges
+  "faster-whisper>=1.2.1",
+  "anthropic>=1.12,<2",
+  "opencv-python-headless>=4.10",
+  "numpy>=2.0",
+  "structlog>=24.4",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "ruff>=0.7",
+  "mypy>=1.13",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
+ignore = ["E501"]  # long lines are left to `ruff format`
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true

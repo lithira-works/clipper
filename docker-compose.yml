@@ -1,0 +1,64 @@
+name: clipper
+
+x-api-env: &api-env
+  ENV: ${ENV:-development}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  REDIS_URL: redis://redis:6379/0
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-opus-5-5}
+  CLAUDE_EFFORT: ${CLAUDE_EFFORT:-high}
+  WHISPER_MODEL: ${WHISPER_MODEL:-large-v3-turbo}
+  WHISPER_DEVICE: ${WHISPER_DEVICE:-auto}
+  CORS_ORIGINS: '["http://localhost:3000"]'
+  YTDLP_COOKIES_FILE: /run/secrets-local/cookies.txt
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./apps/api
+    environment: *api-env
+    volumes: [media:/srv/data]
+    ports: ["8000:8000"]
+    depends_on:
+      redis: { condition: service_healthy }
+
+  worker:
+    build: ./apps/api
+    command: ["arq", "app.worker.WorkerSettings"]
+    healthcheck:
+      disable: true  # image healthcheck targets the API's HTTP port
+    environment: *api-env
+    volumes:
+      - media:/srv/data
+      - whisper-cache:/home/clipper/.cache/huggingface
+      - ./secrets:/run/secrets-local:ro
+    depends_on:
+      redis: { condition: service_healthy }
+    deploy:
+      replicas: ${WORKER_REPLICAS:-1}
+    # GPU transcription: uncomment and set WHISPER_DEVICE=cuda (needs nvidia-container-toolkit
+    # and a CUDA base image, see docs/DEPLOYMENT.md).
+    #   resources:
+    #     reservations:
+    #       devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        API_INTERNAL_URL: http://api:8000
+    ports: ["3000:3000"]
+    depends_on: [api]
+
+volumes:
+  redis-data:
+  media:
+  whisper-cache:
