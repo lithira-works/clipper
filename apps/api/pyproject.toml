@@ -36,6 +36,7 @@ ignore = ["E501"]  # long lines are left to `ruff format`
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 asyncio_mode = "auto"
 
 [tool.mypy]
